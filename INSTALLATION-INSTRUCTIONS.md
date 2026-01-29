@@ -32,6 +32,29 @@ In the .env file, find the line that reads:
 
 Replace "your-mongodb-uri" with the actual URI of your MongoDB database.
 
+This is for frontend/.env
+```bash
+# ----> Remove # comment
+VITE_API_URL=http://your-ip:8888/api/v1 #Change with your ip
+VITE_FILE_BASE_URL=http://localhost:8888/
+VITE_BACKEND_SERVER=http://yoyr-ip:8888 #change with your ip
+PROD=false
+```
+
+This is for backend/.env
+```bash
+DATABASE=your-mongodb-uri
+#RESEND_API = "your resend_api"
+#OPENAI_API_KEY = "your open_ai api key"
+JWT_SECRET=your-secret-key
+NODE_ENV=production
+OPENSSL_CONF=/dev/null
+PORT=8888
+PUBLIC_SERVER_FILE=http://localhost:8888/
+```
+
+
+
 #### Step 5: Install Backend Dependencies
 
 In your terminal, navigate to the /backend directory
