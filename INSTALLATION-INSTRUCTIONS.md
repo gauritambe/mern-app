@@ -153,3 +153,14 @@ npm run dev
 ```
 
 > If you still facing issue, then follow [this stackoverflow thread](https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported). It has so many different types of opinions. You definitely have solution after going through the thread.
+
+
+#### Step 10: Run the app without any step-1 to step-9
+```bash
+docker compose up --build -d
+```
+
+This is for stooping all the containers
+```bash
+docker compose down
+```
