@@ -164,3 +164,9 @@ This is for stooping all the containers
 ```bash
 docker compose down
 ```
+
+## IMP
+Run the k8s folder before that push image to docker hub after applying the k8s file make sure to run following cmd in backend pod
+``` bash
+npm run setup
+```

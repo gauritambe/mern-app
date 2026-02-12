@@ -1,0 +1,125 @@
+pipeline {
+    agent any
+    environment {
+        // Docker
+        DOCKERHUB_USER = credentials('DOCKERHUB_USER')
+
+        VITE_API_URL = "http://<ip>/api/v1"
+        VITE_FILE_BASE_URL = "http://<ip>:8888"
+        VITE_BACKEND_SERVER = "http://<ip>"
+        NODE_ENV = "production"
+
+        // Backend secrets
+        DATABASE = credentials('mongo-url')
+        JWT_SECRET = credentials('jwt-secret')
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'github-fullstack',
+                    url: 'https://github.com/username/full-stack-app-personal.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('sonarqube') {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                          -Dsonar.projectKey=mern-app \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=$SONAR_HOST_URL \
+                          -Dsonar.login=$SONAR_AUTH_TOKEN
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Trivy FS Scan') {
+            steps {
+                sh '''
+                trivy fs --severity HIGH,CRITICAL --exit-code 0 . > trivyfs.txt
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivyfs.txt'
+                }
+            }
+        }
+
+        stage('Build Frontend Image') {
+            steps {
+                sh """
+                docker build \
+                  --build-arg VITE_API_URL=${VITE_API_URL} \
+                  --build-arg VITE_FILE_BASE_URL=${VITE_FILE_BASE_URL} \
+                  --build-arg VITE_BACKEND_SERVER=${VITE_BACKEND_SERVER} \
+                  --build-arg NODE_ENV=${NODE_ENV} \
+                  -t ${DOCKERHUB_USER}/frontend:latest ./frontend
+                """
+            }
+        }
+
+        stage('Build Backend Image') {
+            steps {
+                sh """
+                docker build \
+                  -t ${DOCKERHUB_USER}/backend:latest ./backend
+                """
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh """
+                trivy image --severity HIGH,CRITICAL --exit-code 0 ${DOCKERHUB_USER}/frontend:latest
+                trivy image --severity HIGH,CRITICAL --exit-code 0 ${DOCKERHUB_USER}/backend:latest
+                """
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh "docker push ${DOCKERHUB_USER}/frontend:latest"
+                        sh "docker push ${DOCKERHUB_USER}/backend:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh """
+                minikube addons enable ingress
+                cd k8s
+                kubectl apply -f namespace.yml
+                kubectl apply -f .
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ K8s pipeline successful"
+        }
+        failure {
+            echo "❌ Pipeline failed"
+        }
+    }
+}

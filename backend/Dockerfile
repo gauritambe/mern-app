@@ -10,6 +10,4 @@ COPY . .
 
 EXPOSE 8888
 
-RUN npm run setup
-
 CMD ["npm","run","dev"]

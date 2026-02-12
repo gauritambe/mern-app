@@ -1,0 +1,51 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: api-server
+        image: gauriiitambe/backend:latest
+        ports:
+        - containerPort: 8888
+        envFrom:
+        - configMapRef:
+            name: mern-config
+        env:
+        - name: DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: mern-secrets
+              key: DATABASE
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mern-secrets
+              key: JWT_SECRET
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: test
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8888
+    targetPort: 8888
+  type: NodePort
+
